@@ -24,13 +24,13 @@
 ![Alt text](pic/Picture101.png?raw=true "Title")
 
 
-Four VMs are needed in this lab. Node **ca** will be the certificate authority. Node **ws** will be the web server, and it is the node that LAMP will be installed. Node **user** is where you launch your browser and connect to the website. Port numbers of these nodes are summarized in the following table. It is strongly recommended that you write down such table for your own convenience.
+Four VMs are needed in this lab. Node **ca** will be the certificate authority. Node **ws** will be the web server, and it is the node that LAMP will be installed. Node **user** is where you launch your browser and connect to the website. For your convenience, you could keep a table of port numbers for your nodes. It is also on the "details" tab of Geni portal.
 
 Node Name    | Port Number
 ------------ | -------------
-ca           | 27642
-ws           | 27644
-user         | 27643
+ca           | xxxxx
+ws           | xxxxx
+user         | xxxxx
 
 **_Notice: Not until all the GENI nodes turn green can you continue the following steps. This may take a while._**
 
@@ -63,6 +63,16 @@ You will see three files under this directory.
 ### Certificate Authority Configuration
 
 Before this node can function as a certificate authority, some preparations need to be done. First, "index.txt", "newcerts", "crlnumber", and "serial" should be created under this directory.
+Since all these changes require root privilage, it is suggested to get into root environment before you start. You can exit this environment with "ctrl + D" after these commands are executed.
+
+```sh
+sudo su
+touch /etc/ssl/index.txt
+mkdir /etc/ssl/newcerts
+echo 01 > /etc/ssl/serial
+echo 00 > /etc/ssl/crlnumber
+```
+Your directory should look like this:
 
 ```sh
 /etc/ssl
@@ -73,16 +83,6 @@ Before this node can function as a certificate authority, some preparations need
     private
     serial
     crlnumber
-```
-
-Since all these changes require root privilage, it is suggested to get into root environment before you start. You can exit this environment with "ctrl + D" after these commands are executed.
-
-```sh
-sudo su
-touch /etc/ssl/index.txt
-mkdir /etc/ssl/newcerts
-echo 01 > /etc/ssl/serial
-echo 00 > /etc/ssl/crlnumber
 ```
  
 Edit "openssl.cnf" either remotely through "vim"/"vi" or transfer the file to your computer and edit it with your own editors. In line 42, replace the directory ".demoCA" with "/etc/ssl."
@@ -110,7 +110,7 @@ RANDFILE        = $dir/private/.rand    # private random number file
 ```
 The modification is made for OpenSSL to find your certicicates and private key. Please put them to the specific directory after they are generated. 
 
-[ optional ] Change defaut values in line 129, 134, 139 and 146.
+[ optional ] Change defaut values to what you see below.
 
 ```sh
 [ req_distinguished_name ]
@@ -120,22 +120,22 @@ countryName_min                 = 2
 countryName_max                 = 2
 
 stateOrProvinceName             = State or Province Name (full name)
-stateOrProvinceName_default     = MD
+stateOrProvinceName_default     = SC
 
-localityName                    = Locality Name (eg, city)
+localityName                    = Charleston
 
 0.organizationName              = Organization Name (eg, company)
-0.organizationName_default      = JHU
+0.organizationName_default      = CofC
 
 # we can do this but it is not needed normally :-)
 #1.organizationName             = Second Organization Name (eg, company)
-#1.organizationName_default     = World Wide Web Pty Ltd
+#1.organizationName_default     = 
 
 organizationalUnitName          = Organizational Unit Name (eg, section)
-organizationalUnitName_default  = ISI
+organizationalUnitName_default  = CS
 ```
 
-If you choose to do download the file, here are some tips for file transfer. 
+Copy openssl.cnf to the ws node. Below are tips on how to transfer. Note that files cannot be directly transferred from Geni VM to another easily, so use your PC as the intermediary node to transfer from one VM to another.
 
 #### SFTP
 
@@ -172,12 +172,13 @@ openssl.cnf                                                     100%   11KB 147.
 Instructions of how to use WinSCP can be found in this link: http://mountrouidoux.people.cofc.edu/CyberPaths/winscp.html Using WinSCP requires you to change the permission of "openssl.cnf" first.
 
 ```sh
-sudo chmod 777 openssl.cnf
+sudo chmod 777 /etc/ssl/*
 ```
+Then, transfer the file to the home directory of ws.
 
 ### Generate private key and self-signed certificate
 
-Now, the **ca** node can generate its private key and self-signed certificate. The command of generating private key is:
+Now, the **ca** node can generate its private key and self-signed certificate. You are still on the ca VM, the command of generating private key is:
 
 ```sh
 sudo openssl genrsa -out /etc/ssl/private/ca.key 2048
@@ -207,23 +208,29 @@ For some fields there will be a default value,
 If you enter '.', the field will be left blank.
 -----
 Country Name (2 letter code) [US]:
-State or Province Name (full name) [MD]:
-Locality Name (eg, city) []:Baltimore
-Organization Name (eg, company) [JHU]:
-Organizational Unit Name (eg, section) [ISI]:
-Common Name (e.g. server FQDN or YOUR name) []:jhuca.edu            
+State or Province Name (full name) [SC]:
+Locality Name (eg, city) []:Charleston
+Organization Name (eg, company) [CofC]:
+Organizational Unit Name (eg, section) [CS]:
+Common Name (e.g. server FQDN or YOUR name) []:cofcca.edu            
 Email Address []:
 ```
 
 ### Generate certificate signing request
 
-Now, the **ca** node is ready to sign **ws**'s certificate. The next step is to connect to **ws** node and generate a certificate signing request(CSR). The following commands are used to generate private key and corresponding CSR.
+Now, the **ca** node is ready to sign **ws**'s certificate. The next step is to connect to **ws** node and generate a certificate signing request(CSR). First, transfer openssl.cnf from ws's home directory to /etc/ssl.
+
+```sh
+sudo cp ~/openssl.cnf /etc/ssl/
+```
+
+The following commands are used to generate private key and corresponding CSR.
 
 ```sh
 cd /etc/ssl
 sudo su
-openssl genrsa -out /etc/ssl/private/jhuws.key 2048
-openssl req -new -key /etc/ssl/private/jhuws.key -out /etc/ssl/jhuws.csr
+openssl genrsa -out /etc/ssl/private/cofcws.key 2048
+openssl req -new -key /etc/ssl/private/cofcws.key -out /etc/ssl/cofcws.csr
 ```
  
 Similar to the process of generating self-signed certificate on the **ca** node, it will ask you to put in several information. However, the common name cannot be set arbitrarily this time, it should be consistent with your configuration.
@@ -237,11 +244,11 @@ For some fields there will be a default value,
 If you enter '.', the field will be left blank.
 -----
 Country Name (2 letter code) [AU]:US
-State or Province Name (full name) [Some-State]:MD
-Locality Name (eg, city) []:Baltimore
-Organization Name (eg, company) [Internet Widgits Pty Ltd]:JHU
-Organizational Unit Name (eg, section) []:ISI
-Common Name (e.g. server FQDN or YOUR name) []:jhuws.edu
+State or Province Name (full name) [Some-State]:SC
+Locality Name (eg, city) []:Charleston
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:CofC
+Organizational Unit Name (eg, section) []:CS
+Common Name (e.g. server FQDN or YOUR name) []:cofcws.edu
 Email Address []:
 
 Please enter the following 'extra' attributes
@@ -269,9 +276,9 @@ For example,
 $ sftp -i ~/.ssh/id_geni_ssh_rsa -oPort=27644 yjou2@pc1.geni.it.cornell.edu
 Enter passphrase for key '/Users/yu-tsern/.ssh/id_geni_ssh_rsa': 
 Connected to pc1.geni.it.cornell.edu.
-sftp> mget /etc/ssl/jhuws.csr
-Fetching /etc/ssl/jhuws.csr to jhuws.csr
-/etc/ssl/jhuws.csr                                              100%  993    18.9KB/s   00:00    
+sftp> mget /etc/ssl/cofcws.csr
+Fetching /etc/ssl/cofcws.csr to cofcws.csr
+/etc/ssl/cofcws.csr                                              100%  993    18.9KB/s   00:00    
 sftp> 
 ```
 
@@ -281,25 +288,25 @@ Then, setup another connection with the **ca** node. Note that you are not permi
 $ sftp -i ~/.ssh/id_geni_ssh_rsa -oPort=27642 yjou2@pc1.geni.it.cornell.edu
 Enter passphrase for key '/Users/yu-tsern/.ssh/id_geni_ssh_rsa': 
 Connected to pc1.geni.it.cornell.edu.
-sftp> put jhuws.csr
-Uploading jhuws.csr to /users/yjou2/jhuws.csr
-jhuws.csr                                                       100%  993    36.1KB/s   00:00  
+sftp> put cofcws.csr
+Uploading cofcws.csr to /users/yjou2/cofcws.csr
+cofcws.csr                                                       100%  993    36.1KB/s   00:00  
 ```
 
 #### WinSCP
 
-Still, using WinSCP requires changing permission of "openssl.cnf."
+Still, using WinSCP requires changing permission of "cofcws.csr".
 
 ```sh
 chmod 777 <file_name>
 ```
 
-If you're using the same file name as the one used in the previous steps, it is ”chmod 777 jhuws.csr”
+If you're using the same file name as the one used in the previous steps, it is ”chmod 777 cofcws.csr”. Transfer the file to your home directory and copy it to /etc/ssl.
 
 
 ### Sign the certificate signing request
 
-After CSR is transfered to the **ca** node, a certificate for **ws** can be generated.
+After CSR is transfered to the **ca** node, a certificate for **ws** can be generated. On the ca node, execute the following:
 
 ```sh
 sudo openssl ca -in <csr_location> -out <certificate_location> -days 3650
@@ -308,7 +315,7 @@ sudo openssl ca -in <csr_location> -out <certificate_location> -days 3650
 If you used sftp to transfer CSR, it is probably located at the home directory, thus, the command should look like:
 
 ```sh
-sudo openssl ca -in ~/jhuws.csr -out ~/jhuws.crt -days 3650
+sudo openssl ca -in /etc/ssl/cofcws.csr -out ~/cofcws.crt -days 3650
 ```
 
 It will ask you whether you would like to sign this request. Type "y" to those questions. 
@@ -324,10 +331,10 @@ Certificate Details:
             Not After : Oct 15 13:30:05 2028 GMT
         Subject:
             countryName               = US
-            stateOrProvinceName       = MD
-            organizationName          = JHU
-            organizationalUnitName    = ISI
-            commonName                = jhuws.edu
+            stateOrProvinceName       = SC
+            organizationName          = CofC
+            organizationalUnitName    = CS
+            commonName                = cofcws.edu
         X509v3 extensions:
             X509v3 Basic Constraints: 
                 CA:FALSE
@@ -347,23 +354,23 @@ Write out database with 1 new entries
 Data Base Updated
 ```
 
-Once **ws**'s certificate is generated, transfer "jhuws.crt", "ca.crt" to **ws** node and "ca.crt" to **user** node. In general, a chain of certificates are needed when the server is proving its ownership of the public key. However, for simplicity, there's only one certificate in the chain in this lab. Additionally, recall that when client sees a chain of certificates, it traces the path of trust back to the root CA and see if it is trust worthy, and that is the reason why "ca.crt" should be transfered to the **user** node. 
+Once **ws**'s certificate is generated, transfer "cofcws.crt", "ca.crt" to **ws** node and "ca.crt" to **user** node. In general, a chain of certificates are needed when the server is proving its ownership of the public key. However, for simplicity, there's only one certificate in the chain in this lab. Additionally, recall that when client sees a chain of certificates, it traces the path of trust back to the root CA and see if it is trust worthy, and that is the reason why "ca.crt" should be transfered to the **user** node. 
 
-If you transfer the certificate through your computer, either by SFTP or WinSCP, you can open it and take a look at its content. Use "cat" command to view it on Linux, or double click it on Mac/Windows. You can see that "jhuws.crt" is issued by "jhuca.edu," which is the certificate authority. 
+If you transfer the certificate through your computer, either by SFTP or WinSCP, you can open it and take a look at its content. Use "cat" command to view it on Linux, or double click it on Mac/Windows. You can see that "cofcws.crt" is issued by "cofcca.edu," which is the certificate authority. 
 
-To enable **ws**’s certificate, the certificate and private key should be put into "/etc/ssl."
+To enable **ws**’s certificate, the certificates and private key should be put into "/etc/ssl/certs."
 
 ```sh
 sudo cp <ws_cert_location> /etc/ssl/certs
-sudo cp <ws_key_location> /etc/ssl/private
 ```
 
 For example,
 
 ```sh
-sudo cp ~/jhuws.crt /etc/ssl/certs
-sudo cp /etc/ssl/jhuws.key /etc/ssl/private
+sudo cp ~/cofcws.crt /etc/ssl/certs
 ```
+
+Have the user vm move ca.crt to its /etc/ssl/certs directory as well.
 
 ## Server setups
 
@@ -378,31 +385,10 @@ to update the latest package lists and their dependency.
 
 ### Install MySQL:
 
+On the ws node, use:
+
 ```sh
 sudo apt-get install mysql-server
-```
-
-During the installation, it will ask you to setup a password for MySQL administrator. It won't matter at all, just set whatever password you like.
-
-```
-Package configuration
-
-
-    ┌───────────────────────────┤ Configuring mysql-server-5.7 ├────────────────────────────┐
-    │ While not mandatory, it is highly recommended that you set a password for the MySQL   │ 
-    │ administrative "root" user.                                                           │ 
-    │                                                                                       │ 
-    │ If this field is left blank, the password will not be changed.                        │ 
-    │                                                                                       │ 
-    │ New password for the MySQL "root" user:                                               │ 
-    │                                                                                       │ 
-    │ _____________________________________________________________________________________ │ 
-    │                                                                                       │ 
-    │                                        <Ok>                                           │ 
-    │                                                                                       │ 
-    └───────────────────────────────────────────────────────────────────────────────────────┘ 
-
-
 ```
 
 When the installation is completed, check whether it is installed successfully through the following command.
@@ -420,6 +406,8 @@ tcp        0      0 localhost:mysql         *:*                     LISTEN      
  
 ### Install Apache
 
+On ws,
+
 ```sh
 sudo apt-get install apache2
 ```
@@ -427,6 +415,8 @@ sudo apt-get install apache2
 You will run a browser to check whether it is installed successfully after all other settings are completed.
 
 ### Install PHP
+
+On ws,
 
 ```sh
 sudo apt-get install php-pear php-fpm php-dev php-zip php-curl php-xmlrpc php-gd php-mysql php-mbstring php-xml libapache2-mod-php
@@ -456,12 +446,13 @@ In addition to PHP itself, some other extensions are needed as well.
 ```sh
 sudo apt-get install php-intl php-imagick php-imap php-mcrypt php-memcache php7.0-ps php-pspell php-recode php-snmp php7.0-sqlite php-tidy php7.0-xsl
 ```
+If you get an error, ignore and carry on.
 
 **_Notice: the GENI node is initiated with an Ubuntu operation system by default. If you choose other operation systems rather the default one, there might be a warning message showing that it may fail to initiate the GENI nodes._**
 
 ### Write a simple PHP website
 
-You will write a simple PHP website and try to connect to it in order to test whether PHP was installed successfully. You can use whatever way you like to write the PHP source code. Recall that "www" stores the website source code. To make change to this file, first change its permission.
+You will write a simple PHP website and try to connect to it in order to test whether PHP was installed successfully. You can use whatever way you like to write the PHP source code. Recall that "www" stores the website source code. To make change to this file, first change its permission. On ws node:
 
 ```sh
 sudo chmod 777 /var/www
@@ -508,14 +499,14 @@ Then, use
 ifconfig
 ```
 
-to find IP address, and modify "/etc/apache2/sites-enabled/default-ssl.conf": In line 2, replace "_default_" with the IP address you just found. Do not remove “:443” after the IP addres. It is the port number for SSL connection. In line 4, insert a line and specify your ServerName. In line 32, 33, and 34, change the directory to where your certificate and private key are stored, and add a new line specifying SSLCertificateChainFile.
+to find IP address of eth0, and modify "/etc/apache2/sites-enabled/default-ssl.conf": In line 2, replace "_default_" with the IP address you just found. Do not remove “:443” after the IP addres. It is the port number for SSL connection. In line 4, insert a line and specify your ServerName. In line 32, 33, and 34, change the directory to where your certificate and private key are stored, and add a new line specifying SSLCertificateChainFile.
 
 
 ```sh
 <IfModule mod_ssl.c>
         <VirtualHost 172.17.1.14:443>
                 ServerAdmin webmaster@localhost
-                ServerName www.jhuws.edu
+                ServerName www.cofcws.edu
                 DocumentRoot /var/www/html
 
                 # Available loglevels: trace8, ..., trace1, debug, info, notice, warn,
@@ -543,9 +534,9 @@ to find IP address, and modify "/etc/apache2/sites-enabled/default-ssl.conf": In
                 #   /usr/share/doc/apache2/README.Debian.gz for more info.
                 #   If both key and certificate are stored in the same file, only the
                 #   SSLCertificateFile directive is needed.
-                SSLCertificateFile      /etc/ssl/certs/jhuws.crt
+                SSLCertificateFile      /etc/ssl/certs/cofcws.crt
                 SSLCertificateChainFile /etc/ssl/certs/ca.crt
-                SSLCertificateKeyFile /etc/ssl/private/jhuws.key
+                SSLCertificateKeyFile /etc/ssl/private/cofcws.key
 ```
 
 After it is modified, check whether the configuration is correct:
@@ -574,7 +565,7 @@ Now you can test the result of all the previous work by connecting web server fr
 sudo chmod 777 /etc/hosts
 ```
 
-and edit it so that the server name "jhuws.edu" is mapped to the IP addresses.
+and edit it so that the server name "cofcws.edu" is mapped to the IP addresses.
 
 ```sh
 127.0.0.1       localhost loghost localhost.pkileo.ch-geni-net.geni.it.cornell.edu
@@ -584,25 +575,25 @@ and edit it so that the server name "jhuws.edu" is mapped to the IP addresses.
 10.10.3.2       WS-link-2 WS-2 WS
 10.10.1.2       WS-link-0 WS-1
 10.10.2.2       WS-link-1 WS-0
-172.17.2.14     jhuws.edu
-172.17.2.14     www.jhuws.edu
+172.17.2.14     cofcws.edu
+172.17.2.14     www.cofcws.edu
 ```
 
-“172.17.2.14” is the IP address of **ws** node. And "jhuws.edu" should be the server name you set up before. After these changes are made, put "ca.crt" into /etc/ssl/certs on the **user** node, and create a symbolic link for it (more details of symbolic link can be found [here](http://gagravarr.org/writing/openssl-certs/others.shtml#ca-openssl)).
+“172.17.2.14” is the IP address of **ws** node. And "cofcws.edu" should be the server name you set up before. After these changes are made, put "ca.crt" into /etc/ssl/certs on the **user** node, and create a symbolic link for it (more details of symbolic link can be found [here](http://gagravarr.org/writing/openssl-certs/others.shtml#ca-openssl)).
 ```
 ln -s ca.crt `openssl x509 -hash -noout -in ca.crt`.0
 ```
 Finally, use openssl to test the connection.
 
 ```
-openssl s_client -showcerts -connect www.jhuws.edu:443
+openssl s_client -showcerts -connect www.cofcws.edu:443
 ```
 If everything went well, you will see message like
 ```
 CONNECTED(00000003)
-depth=1 C = US, ST = MD, L = Baltimore, O = JHU, OU = ISI, CN = jhuca.edu
+depth=1 C = US, ST = SC, L = Charleston, O = CofC, OU = CS, CN = cofcca.edu
 verify return:1
-depth=0 C = US, ST = MD, O = JHU, OU = ISI, CN = jhuws.edu
+depth=0 C = US, ST = SC, O = CofC, OU = CS, CN = cofcws.edu
 verify return:1
 ```
 
@@ -611,7 +602,7 @@ verify return:1
 Now, try to revoke the digital certificate. First, connect to the **ca** node and use this command to revoke the digital certificate.
 
 ```sh
-sudo openssl ca -revoke jhuws.crt
+sudo openssl ca -revoke cofcws.crt
 ```
 
 You will see two messages, "Revoking Certificate XX(some number)" and "Data Base Updated." For example, 
@@ -647,7 +638,7 @@ Initially, the ”crlnumber” was set to "00". Everytime a certificate is revok
 
 Move the Certificate Revokation List, "ca.crl," to the **user** node. Since OpenSSL does not support CRL funtion although command like "-CRL" or "-CRLform" do exist, test the connection with curl. Note that CRL is included this time.
 ```
-curl https://jhuws.edu --cacert ca.crt --crlfile ca.crl
+curl https://cofcws.edu --cacert ca.crt --crlfile ca.crl
 ```
 You will see there's an error complaining the certificate was revoked.
 
