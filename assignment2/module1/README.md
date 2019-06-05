@@ -372,7 +372,7 @@ For example,
 sudo cp ~/cofcws.crt /etc/ssl/certs
 ```
 
-Have the user vm move ca.crt to its /etc/ssl/certs directory as well.
+Have the user node move ca.crt to its /etc/ssl/certs directory as well.
 
 ## Server setups
 
