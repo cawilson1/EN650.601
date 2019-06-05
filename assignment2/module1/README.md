@@ -62,12 +62,13 @@ You will see three files under this directory.
 
 ### Certificate Authority Configuration
 
-Before this node can function as a certificate authority, some preparations need to be done. First, "index.txt", "newcerts", "crlnumber", and "serial" should be created under this directory.
+Before this node can function as a certificate authority, some preparations need to be done. First, "index.txt", "index.txt.attr", "newcerts", "crlnumber", and "serial" should be created under this directory.
 Since all these changes require root privilage, it is suggested to get into root environment before you start. You can exit this environment with "ctrl + D" after these commands are executed.
 
 ```sh
 sudo su
 touch /etc/ssl/index.txt
+touch /etc/ssl/index.txt.attr
 mkdir /etc/ssl/newcerts
 echo 01 > /etc/ssl/serial
 echo 00 > /etc/ssl/crlnumber
@@ -78,6 +79,7 @@ Your directory should look like this:
 /etc/ssl
     certs
     index.txt
+    index.txt.attr
     newcerts
     openssl.cnf
     private
